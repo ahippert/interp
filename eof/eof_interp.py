@@ -88,20 +88,16 @@ def compute_image_rmse(im1, im2, nx, ny):
             rmse_im += np.linalg.norm(im1[i][j] - im2[i][j])**2
     return np.sqrt(rmse_im/(nx*ny))
 
-def compute_mean(matrix, n, col, nozeros=True):
-    matrix_mean = []
-    for i in range(0, n):
-        if col :
-            if nozeros:
-                matrix_mean.append(np.nanmean(matrix[:,i]))
-            else:
-                matrix_mean.append(np.mean(matrix[:,i]))
-        else :
-            if nozeros:
-                matrix_mean.append(np.nanmean(matrix[i]))
-            else:
-                matrix_mean.append(np.mean(matrix[i]))
-    return matrix_mean
+def compute_mean(data, col, nozeros=True):
+    datamean = []
+    if not col: data = data
+    else: data = data.T
+    for i in range(0, data.shape[0]):
+        if not nozeros:
+            datamean.append(np.mean(data[i])) 
+        else:
+            datamean.append(np.nanmean(data[i]))
+    return datamean
 
 def compute_mean0(matrix, n, col, nozeros=True):
     matrix_mean = []
@@ -119,14 +115,14 @@ def compute_mean0(matrix, n, col, nozeros=True):
     return matrix_mean
     
 
-def remove_mean(matrix, t_mean, n, col):
+def remove_mean(data, t_mean, n, col):
     if col: 
         for i in range(0, n):
-            matrix[:,i] -= t_mean[i]
+            data[:,i] -= t_mean[i]
     else:
         for i in range(0, n):
-            matrix[i] -= t_mean[i]
-    return matrix
+            data[i] -= t_mean[i]
+    return data
 
 def add_mean(data, mean, n, col):
     if col:
@@ -198,8 +194,8 @@ r3 = np.sqrt((x-h2)**2+(y-k2)**2)
 r = r1# + r2 + r3
 
 # time series of field
-mode = 2
-modes = 3 # in [2,7]
+mode = 1
+modes = 1 # in [2,7]
 if mode == 1:
     truth = np.array([volcan(r, (t/nt)+30/nt) for t in range(10, nt+10)])
 elif mode == 2:
@@ -242,15 +238,14 @@ gaps = ng.gen_noise_series2(corr, b, nt)
 # noise_init = np.random.normal(mu, sigma, (nt, nx, ny))                                 
 # noise_init *= 0.1
 # fval = [0.0, np.reshape(noise_init, (nt, nobs)).T] # two types of gaps generation
-pourcent = [20]
+pourcent = [10]
 col = True
 #init_zero = [True, False] 
-inits = ['zero','noise'] # 'noise' or 'zero'
+inits = ['zero']#,'noise'] # 'noise' or 'zero'
 gens = ['random'] # 'random' or 'correlated'
 
 #for i in gens: # loop for gap generation type
 for ti in range(1):
-    
     if not BUILDNOISE: 
         noise = np.zeros((nt,nx,ny))
     else:
@@ -258,14 +253,15 @@ for ti in range(1):
         expo = 1.4 # exponent in correlation function (as: 1/(r)**expo)
         geo_noise = ng.geo(r, expo)
         if NOISE_TYPE == 'corr':
-            noise = ng.gen_noise_series(geo_noise, blanc, nt)
-            #noise = cn.gen_corr_noise(nt, 10, 0.01, 0.9)
+            noise1 = ng.gen_noise_series(geo_noise, blanc, nt)
+            noise2 = cn.gen_corr_noise(0.95, (nt,nx,ny), 0)
+            noise = noise2# + noise2
         elif NOISE_TYPE == 'rand':
             noise = blanc
     # time series of evolving noise
     inter = 3
     mul = np.linspace(1, 8, inter)
-    mul = [6]
+    mul = [0.1]
     noises = [noise*i for i in mul]
     
     for n in range(len(mul)): # loop for different noise levels
@@ -277,10 +273,10 @@ for ti in range(1):
         datai = np.reshape(data, (nt, nobs)).T
 
         truthi = np.reshape(copy.copy(truth), (nt, nobs)).T
-        truth_mean = compute_mean(truthi, nt, col)
+        truth_mean = compute_mean(truthi, col)
         ftruth = remove_mean(truthi, truth_mean, nt, col)
             
-        dataimean = compute_mean(datai, nt, col)
+        dataimean = compute_mean(datai, col)
         dataii = copy.copy(datai)
         dataii = remove_mean(dataii, dataimean, nt, col)
 
@@ -326,7 +322,7 @@ for ti in range(1):
                 # Create a blank image
                 #fdispl[:,10][1000:30000] = np.nan
 
-                displ_mean = compute_mean(fdispl, nt, col)
+                displ_mean = compute_mean(fdispl, col)
                 fdispl = remove_mean(fdispl, displ_mean, nt, col)
 
                 
@@ -339,39 +335,22 @@ for ti in range(1):
                     if init == 'zero':
                         fdispltp[mask_temp == True] = fval[0]
                     
-                    # u, d, v = np.linalg.svd(compute_cov(fdispltp),
-                    #                         full_matrices=True)
-                    # plot_bars(range(nt),
-                    #           compute_variance_by_mode(nt, d),'i','j')
+                        u, d, v = np.linalg.svd(compute_cov(fdispltp),
+                                                full_matrices=True)
+                        plot_bars(range(nt),
+                                  compute_variance_by_mode(nt, d),'i','j')
                                   
                     elif init == 'noise':
                         fdispltp[mask_temp == True] = fval[1][mask_temp == True]
                     
                     #fdispltp[:,10][1000:30000] = fval[1][:,10][1000:30000]
-                    # u1, d1, v1 = np.linalg.svd(compute_cov(fdispltp),
-                    #                            full_matrices=True)
-                    # plot_bars(range(nt),
-                    #           compute_variance_by_mode(nt, d1),'k','l')
-
-                    # u2, d2, v2 = np.linalg.svd(compute_cov(dataii),
-                    #                            full_matrices=True)
-                    # plot_bars(range(nt),
-                    #           compute_variance_by_mode(nt, d2),'k','l')
-                    # plt.figure()
-                    # plt.plot(d, 'ro', alpha=0.9)
-                    # plt.plot(d1,'ko', alpha=0.2)
-                    # plt.plot(d2,'bo')
-                    # plt.figure()
-                    # plt.plot(d-d1)
-                    # plt.show()
-
-                    
+                                        
                     # EOF decomposition
                     c = True
                     econv = 1e-6
                     e = []
+                    e.append(3)
                     e.append(2)
-                    e.append(1)
                     i = 1
                     j = 0
                     neof = 1
@@ -410,7 +389,7 @@ for ti in range(1):
                                 continue
                             else:
                                 e.append(rms_cv[j-1])
-                                if (1 - e[i+1]/e[i]) < 0.05:
+                                if (1 - e[i+1]/e[i]) < 0.2:
                                     end_t = time.time()
                                     print('procedure stopped!')
                                     break
@@ -428,22 +407,9 @@ for ti in range(1):
             # Compute RMSE image to image 
             #rms_all = np.append(rms_all, [compute_image_rmse(field[i], ftruth[i], nx, ny) for i in range(nt)])
             # Compute signal to noise ratio
-            #sn_ratio = np.append(sn_ratio, np.std(truth)/np.std(noises[n]))
-            #print ('SNR: %0.03f - NSR: %0.03f' %(sn_ratio, 1./sn_ratio))
-            print ('SNR: %0.03f' %(np.std(truth)/np.std(noises[n])))
-
-
-
-plt.figure()
-plt.plot(rmsinit[::2],'ro')
-plt.plot(rmsinit[1::2],'ko')
-plt.show()
+            sn_ratio = np.append(sn_ratio, np.std(truth)/np.std(noises[n]))
+            print ('SNR: %0.03f - NSR: %0.03f' %(sn_ratio, 1./sn_ratio))
             
-
-# Energy bar plots            
-#eigvals.append(np.linalg.eigvals(np.cov(field.T)))
-#variance = compute_variance_by_mode(nt, eigval)
-#plot_bars(range(1, nt+1), variance, 'Mode', 'Contained variance in mode k (%)')
 
 # STEP 5
 for i in range(len(fields)):
@@ -472,6 +438,12 @@ dataii = np.reshape(dataii, (nx, ny, nt)).T
 
 
 """""""""""""""""""""---GRAPHICS---"""""""""""""""""""""
+
+# Energy bar plots
+
+#eigvals.append(np.linalg.eigvals(np.cov(field.T)))
+#variance = compute_variance_by_mode(nt, eigval)
+#plot_bars(range(1, nt+1), variance, 'Mode', 'Contained variance in mode k (%)')
 
 ##### SCATTER PLOT TESTS #####
 
@@ -548,124 +520,59 @@ plt.title('RMSE vs iterations')
 plt.plot(rmscv[:-1], label='cross-v error')
 plt.plot(rmseof[:-1], label='real error')
 plt.legend()
-# fig, ax = plt.subplots(figsize=(7,5))
-# ax.plot(range(1,nEOF), chsq_truth)
-# ax.plot(range(1,nEOF), chsq, 'r')
-# ax.set_title('2nd order displacement field with %d%% gaps, SNR=%0.02f' %(pourcent[0], sn_ratio[0]))
-# ax.set_xlabel('Number of EOFs retained in reconstruction')
-# ax.set_ylabel('Chi-square')
-
-# fig, ax = plt.subplots(figsize=(7,5))
-# ax.plot(range(0,nEOF-1), ftst)
-
-# ax.set_title('2nd order displacement field with %d%% gaps, SNR=%0.02f' %(pourcent[0], sn_ratio[0]))
-# ax.set_xlabel('Step')
-# ax.set_ylabel('F-test')
-#plt.show()
 
 ## EIGENVALUES PLOTS ##
+
 # plt.figure()
 # for i in range(len(eigvals)):
 #     plt.plot(range(nt), np.sort(np.real(eigvals[i]))[::-1])
 
 
-
-
-# X, Y = np.meshgrid(sn_ratio[0:len(pourcent)], pourcent) 
-# rms_eof_g1, rms_it_g1, rms_vc_g1 = [], [], []
-# rms_eof_g2, rms_it_g2, rms_vc_g2 = [], [], []
-# s = X.shape[0]
-# for i in range(X.shape[0]):
-#     rms_eof_g1 += rms_eof[2*s*i:s*(2*i+1)]
-#     rms_it_g1 += rms_it[2*s*i:s*(2*i+1)]
-#     rms_vc_g1 += rms_vc[2*s*i:s*(2*i+1)]
-#     rms_eof_g2 += rms_eof[s*(2*i+1):2*s*(i+1)]
-#     rms_it_g2 += rms_it[s*(2*i+1):2*s*(i+1)]
-#     rms_vc_g2 += rms_vc[s*(2*i+1):2*s*(i+1)]
-# Z1 = np.reshape(rms_eof_g1,(X.shape[0], X.shape[0]))
-# Z2 = np.reshape(rms_it_g1,(X.shape[0], X.shape[0]))
-# Z3 = np.reshape(rms_vc_g1,(X.shape[0], X.shape[0]))
-# Z4 = np.reshape(rms_eof_g2,(X.shape[0], X.shape[0]))
-# Z5 = np.reshape(rms_it_g2,(X.shape[0], X.shape[0]))
-# Z6 = np.reshape(rms_vc_g2,(X.shape[0], X.shape[0]))
-# Z = [Z1, Z2, Z3, Z4, Z5, Z6]
-# col = ['r', 'b', 'k', 'r', 'b', 'k']
-
-# fig, axs = plt.subplots(nrows=2, ncols=3, figsize=(10, 5))
-# i=0
-# #levels
-# for ax in axs.flat:
-#     CS = ax.contour(X, Y, Z[i].T, colors=col[i])
-#     i+=1
-#     plt.clabel(CS, inline=1, fontsize=8)
-# plt.show()
-
-
-    
-
 ##### plot fields #####
-# ind = 10
-# img = [ind]
-# cmaps = ['RdGy', 'inferno', 'viridis', 'seismic']
-# axtitle = ['Truth', 'Real', 'Reconstructed']
-# cm = 0
-# row1, col1 = 1, 3
-# mat1 = [ftruth, fdispl, fields[len(fields)-2]]
-# row2, col2 = 1, 2
-# mat2 = [ftruth-fields[len(fields)-2], noise]
-# max1, min1 = np.nanmax(fdispl[ind]), np.nanmin(fdispl[ind])
-# max2, min2 = np.max(noise[ind])+0.3, np.min(noise[ind])-0.3
-# savefig = False
+ind = 10
+img = [ind]
+cmaps = ['RdGy', 'inferno', 'viridis', 'seismic']
+ax1title = ['Truth', 'Real', 'Reconstructed']
+ax2title = ['Residuals', 'Noise']
+cm = 0
+row1, col1 = 1, 3
+mat1 = [ftruth, fdispl, fields[len(fields)-2]]
+row2, col2 = 1, 2
+mat2 = [ftruth-fields[len(fields)-2], noises[0]]
+max1, min1 = np.nanmax(fdispl[ind]), np.nanmin(fdispl[ind])
+max2, min2 = np.max(noises[0][ind])+0.05, np.min(noises[0][ind])-0.05
+savefig = False
+path = '/home/hipperta/Documents/img/reconstruction/'
 
-# for i in img :
-#     j=0
-#     fig, axs = plt.subplots(nrows=row1, ncols=col1, figsize=(15, 5))
-#     #fig.suptitle('%d EOF - %d%% %s gaps - SNR=%0.02f' %(nEOF, pourcent[0], gen, sn_ratio[0]),
-#     #             fontsize = 16)
-#     fig.suptitle('%d EOF - %d%% gaps - SNR=%0.02f - %d iterations' %(neof-1, pourcent[0], sn_ratio[0], itr),
-#                  fontsize = 16)
-#     for ax in axs.flat:
-#         im = ax.imshow(mat1[j][i].T, vmin=min1, vmax=max1, cmap = cmaps[cm])
-#         ax.set_title(axtitle[j], fontsize=16)
-#         j+=1
-#         fig.subplots_adjust(right=0.8)
-#         cb_ax = fig.add_axes([0.84, 0.2, 0.03, 0.59])
-#         cbar = fig.colorbar(im, cax=cb_ax)
-#     j=0
-#     if savefig :
-#         plt.savefig('/home/hipperta/Documents/img/reconstruction/g%d%%_snr%0.01f.png' %(pourcent[0], sn_ratio[0]))
-#     fig, axs = plt.subplots(nrows=row2, ncols=col2, figsize=(10, 5))
-#     for ax in axs.flat:
-#         im = ax.imshow(mat2[j][i].T, vmin=min2, vmax=max2, cmap = cmaps[cm])
-#         j+=1
-#         fig.subplots_adjust(right=0.8)
-#         cb_ax = fig.add_axes([0.85, 0.11, 0.03, 0.76])
-#         cbar = fig.colorbar(im, cax=cb_ax)
+for i in img :
+    j=0
+    fig, axs = plt.subplots(nrows=row1, ncols=col1, figsize=(15, 5))
+    fig.suptitle('%d EOF - %d%% gaps - SNR=%0.02f - %d iterations' %(neof-1, pourcent[0], sn_ratio[0], itr), fontsize = 16)
+    for ax in axs.flat:
+        im = ax.imshow(mat1[j][i].T, vmin=min1, vmax=max1, cmap = cmaps[cm])
+        ax.set_title(ax1title[j], fontsize=16)
+        j+=1
+        fig.subplots_adjust(right=0.8)
+        cb_ax = fig.add_axes([0.84, 0.2, 0.03, 0.59])
+        cbar = fig.colorbar(im, cax=cb_ax)
+    if savefig : plt.savefig(path+'g%d%%_snr%0.01f.png' %(pourcent[0], sn_ratio[0]))
+    j=0  
+    fig, axs = plt.subplots(nrows=row2, ncols=col2, figsize=(10, 5))
+    for ax in axs.flat:
+        im = ax.imshow(mat2[j][i].T, vmin=min2, vmax=max2, cmap = cmaps[cm])
+        ax.set_title(ax2title[j], fontsize=16)
+        j+=1
+        fig.subplots_adjust(right=0.8)
+        cb_ax = fig.add_axes([0.85, 0.11, 0.03, 0.76])
+        cbar = fig.colorbar(im, cax=cb_ax)
 
         
-# for i in range(len(fields)):
-#      plt.figure()
-#      plt.imshow(fields[i][ind].T, vmin=min1, vmax=max1, cmap = cmaps[cm])
-# plt.show()
+for i in range(len(fields)):
+     plt.figure()
+     plt.imshow(fields[i][ind].T, vmin=min1, vmax=max1, cmap = cmaps[cm])
+plt.show()
 
 
-# tstruth = []
-# tsdispl = []
-# tsfield = []
-# tsdataii = []
-# x = np.random.randint(50)
-# y = np.random.randint(50)
-# for i in range(0, nt):
-#     tstruth.append(ftruth[i][x][y])
-#     tsdispl.append(fdispl[i][x][y])
-#     tsdataii.append(dataii[i][x][y])
-#     tsfield.append(fields[len(fields)-2][i][x][y])
-# fig, ax = plt.subplots(figsize=(7,5))
-# ax.plot(tstruth, 'k-', label='original field')
-# ax.plot(tsdispl, 'r-', label='gappy + noisy field')
-# ax.plot(tsdataii, 'r--', label='value of field in gaps')
-# ax.plot(tsfield, 'b-', label='reconstructed field')
-# plt.legend()
 
 
 ##### plot SNR and error of temporal series #####
