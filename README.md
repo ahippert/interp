@@ -1,3 +1,3 @@
 # interp
 
-Module for EOF-based interpolation of geophysical fields.
+This package contains modules for interpolation of incomplete geophysical fields using Empirical Orthogonal Functions (EOF) analysis. 
