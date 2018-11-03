@@ -1,15 +1,23 @@
 #!/usr/bin/env python
 
-# Statistics in python
+#########################################
+#
+# interp.stats
+#
+# Statistics in python.
 #
 # AH 07-09-2018
-# Last update : 01-11-2018
+# Last update : 03-11-2018
+#########################################
+
 
 import numpy as np
 
+
 def rmse(pred, obs, nt, nx, ny, col=True):
-    """ Compute the Root-Mean-Square Error (RMSE) 
-    between prediction and observation fields """
+    """Compute the Root-Mean-Square Error (RMSE) 
+    between prediction and observation fields 
+    """
     sum_of_dif = 0
     for i in range(0, nt):
         if col :
@@ -18,24 +26,27 @@ def rmse(pred, obs, nt, nx, ny, col=True):
             sum_of_dif += np.linalg.norm(pred[i] - obs[i])**2
     return np.sqrt(sum_of_dif/(nt*nx*ny))
 
+
 def rmse_zero_mode(pred, obs, nt, nx, ny):
-    """ Compute RMSE between the mean of prediction and observation fields
+    """Compute RMSE between the mean of prediction and observation fields
     """
     sum_of_dif = 0
     for i in range(0, nt):
         sum_of_dif += np.linalg.norm(np.mean(pred[:,i])-obs[:,i])**2
     return np.sqrt(sum_of_dif/(nt*nx*ny))
 
+
 def rmse_cross_v(pred, obs, N):
-    """ Compute cross-RMSE between prediction and observation fields
+    """Compute cross-RMSE between prediction and observation fields
     """
     sum_of_dif = 0 
     for i in range(0, N):
         sum_of_dif += np.linalg.norm(pred[i] - obs[i])**2
     return np.sqrt(sum_of_dif/N)
 
+
 def rmse_cv_zero_mode(pred, obs, N):
-    """ Compute cross-RMSE between the mean of prediction and observation fields
+    """Compute cross-RMSE between the mean of prediction and observation fields
     """
     sum_of_dif = 0 
     for i in range(0, N):
@@ -51,8 +62,9 @@ def compute_image_rmse(im1, im2, nx, ny):
             rmse_im += np.linalg.norm(im1[i][j] - im2[i][j])**2
     return np.sqrt(rmse_im/(nx*ny))
 
+
 def compute_mean(data, col, nozeros=True):
-    """ Compute the column/line mean of a matrix without NaNs
+    """Compute the column/line mean of a matrix without NaNs
     """
     datamean = []
     if not col: data = data
@@ -64,9 +76,10 @@ def compute_mean(data, col, nozeros=True):
             datamean.append(np.nanmean(data[i]))
     return datamean
 
+
 def compute_mean0(matrix, n, col, nozeros=True):
-    '''Compute the column/line mean of a matrix without zeros
-    '''
+    """Compute the column/line mean of a matrix without zeros
+    """
     matrix_mean = []
     for i in range(0, n):
         if col:
@@ -80,9 +93,10 @@ def compute_mean0(matrix, n, col, nozeros=True):
             else:
                 matrix_mean.append(np.mean(matrix[i]))
     return matrix_mean
-    
+
+
 def remove_mean(data, mean, col):
-    """ Remove the column/line mean of a matrix
+    """Remove the column/line mean of a matrix
     """
     if col: 
         for i in range(0, data.shape[1]):
@@ -92,8 +106,9 @@ def remove_mean(data, mean, col):
             data[i] -= mean[i]
     return data
 
+
 def remove_t_mean(data, mean):
-    """ Remove the temporal mean of a time series matrix
+    """Remove the temporal mean of a time series matrix
     """
     n = max(data.shape[0],data.shape[1])
     for i in range(0, n):
@@ -103,8 +118,9 @@ def remove_t_mean(data, mean):
             data[:,i] -= mean[i]
     return data
 
+
 def remove_s_mean(data, mean):
-    """ Remove the spatial mean of a time series matrix
+    """Remove the spatial mean of a time series matrix
     """
     n = min(data.shape[0],data.shape[1])
     for i in range(0, n):
@@ -115,7 +131,7 @@ def remove_s_mean(data, mean):
     return data
 
 def add_mean(data, mean, col):
-    """ Add the column/line mean of a matrix 
+    """Add the column/line mean of a matrix 
     """
     if col:
         for i in range(0, data.shape[1]):
@@ -131,9 +147,11 @@ def add_mean(data, mean, col):
                 data[i] += mean[i]
     return data
 
+
 def compute_variance_by_mode(n_EOF, singular_val, cov=True):
-    """ Compute variance contained in any mode (EOF)
-    Based on Beckers and Rixen 2001 """
+    """Compute variance contained in any mode (EOF).
+    Based on Beckers and Rixen 2001
+    """
     tot_variance = 0
     variance = []
     # singular values of field matrix X are the square roots
@@ -144,8 +162,9 @@ def compute_variance_by_mode(n_EOF, singular_val, cov=True):
         tot_variance += singular_val[i]
     return [100*((singular_val[i])/tot_variance) for i in range(0, n_EOF)]
 
+
 def chi2(obs, pred, n):
-    """ Compute statistical Chi-2 between observations and predictions
+    """Compute statistical Chi-2 between observations and predictions
     """
     chi = 0.
     for i in range(n):
@@ -155,8 +174,9 @@ def chi2(obs, pred, n):
             chi += (1/np.var(obs))*(obs[i] - pred[i])**2
     return chi
 
+
 def ftest(data1, data2):
-    """ Compute the F-Test between the variances of two datasets
+    """Compute the F-Test between the variances of two datasets
     """
     var1, var2 = np.var(data1), np.var(data2)
     if var1 > var2:
